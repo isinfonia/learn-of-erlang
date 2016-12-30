@@ -1,3 +1,0 @@
-%% encoding: UTF-8
-{application,test_server}.
-{modules,[tr_app,tr_server,tr_sup]}.
