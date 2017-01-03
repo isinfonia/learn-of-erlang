@@ -1,3 +1,4 @@
 *.beam
 book/
 tags
+.DS_Store
