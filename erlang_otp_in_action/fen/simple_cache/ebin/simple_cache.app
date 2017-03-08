@@ -4,6 +4,6 @@
   {module, [sc_app,
             sc_sup]},
   {registered, [sc_sup]},
-  {application, [kernel, stdlib]},
+  {application, [kernel, stdlib, mnesia, resource_discovery]},
   {mod, {sc_app, []}}
 ]}.

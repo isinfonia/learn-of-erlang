@@ -48,24 +48,24 @@ handle_cast({add_target_resource_type, Type}, State) ->
     NewTargetTypes = [Type | lists:delete(Type, TargetTypes)],
     {noreply, State#state{target_resource_types = NewTargetTypes}};
 
-handle_cast({add_local_resource, {Type, Instance}, State}) ->
+handle_cast({add_local_resource, {Type, Instance}}, State) ->
     ResourceTuples = State#state.local_resource_tuples,
     NewResourceTuples = add_resource(Type, Instance, ResourceTuples),
     {noreply, State#state{local_resource_tuples = NewResourceTuples}};
 
-handle_cast({trade_resources, State}) ->
+handle_cast(trade_resources, State) ->
     ResourceTuples = State#state.local_resource_tuples,
     AllNodes = [node() | nodes()],
-    lists:foreach{
+    lists:foreach(
         fun(Node) ->
             gen_server:cast({?SERVER, Node}, {trade_resources, {node(), ResourceTuples}})
         end,
-        AllNodes},
-    {noreply, State};
+        AllNodes,
+    {noreply, State});
 
 handle_cast({trade_resources, {ReplyTo, Remotes}},
             #state{local_resource_tuples = Locals, 
-                   target_resource_types = TatgetTypes,
+                   target_resource_types = TargetTypes,
                    found_resource_tuples = OldFound} = State) ->
     FiltereRemotes = resources_for_types(TargetTypes, Remotes),
     NewFound = add_resources(FiltereRemotes, OldFound),
@@ -76,10 +76,19 @@ handle_cast({trade_resources, {ReplyTo, Remotes}},
             gen_server:cast({?SERVER, ReplyTo},
                             {trade_resources, {noreply, Locals}})
     end,
-    {noreply, State#state{found_resource_tuples = NewFound}};
+    {noreply, State#state{found_resource_tuples = NewFound}}.
 
 handle_call({fetch_resources, Type}, _From, State) ->
     {reply, dict:find(Type, State#state.found_resource_tuples), State}.
+
+handle_info(_, State) ->
+    {ok, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
 
 %%%========================
 %%% Inrernal functions 
@@ -104,7 +113,7 @@ resources_for_types(Types, ResourceTuples) ->
     Fun = fun(Type, Acc) ->
             case dict:find(Types, ResourceTuples) of
                 {ok, List} ->
-                    [{Types, Instance} || Instance <- List] ++ Acc;
+                    [{Type, Instance} || Instance <- List] ++ Acc;
                 error ->
                     Acc
             end
